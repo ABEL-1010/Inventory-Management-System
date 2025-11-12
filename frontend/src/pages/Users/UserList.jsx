@@ -28,7 +28,7 @@ const UserList = () => {
     try {
       setLoading(true);
       const usersData = await userService.getUsers();
-      setUsers(usersData);
+      setUsers(usersData || []); // Ensure it's always an array
     } catch (error) {
       setError('Failed to load users: ' + error.message);
     } finally {
@@ -38,12 +38,17 @@ const UserList = () => {
 
   // Filter users based on current filters
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-                         user.email.toLowerCase().includes(filters.search.toLowerCase());
-    const matchesRole = !filters.role || user.role === filters.role;
+    // Add safety checks for user properties
+    const userName = user?.name || '';
+    const userEmail = user?.email || '';
+    const userRole = user?.role || '';
+    
+    const matchesSearch = userName.toLowerCase().includes(filters.search.toLowerCase()) ||
+                         userEmail.toLowerCase().includes(filters.search.toLowerCase());
+    const matchesRole = !filters.role || userRole === filters.role;
     const matchesStatus = filters.status === '' || 
-                         (filters.status === 'active' && user.isActive) ||
-                         (filters.status === 'inactive' && !user.isActive);
+                         (filters.status === 'active' && user?.isActive) ||
+                         (filters.status === 'inactive' && !user?.isActive);
     
     return matchesSearch && matchesRole && matchesStatus;
   });
@@ -52,7 +57,7 @@ const UserList = () => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         await userService.deleteUser(id);
-        setUsers(users.filter(user => user._id !== id));
+        setUsers(users.filter(user => user?._id !== id));
       } catch (error) {
         alert('Error deleting user: ' + error.message);
       }
@@ -73,7 +78,7 @@ const UserList = () => {
     try {
       if (editingUser) {
         const updatedUser = await userService.updateUser(editingUser._id, userData);
-        setUsers(users.map(user => user._id === updatedUser._id ? updatedUser : user));
+        setUsers(users.map(user => user?._id === updatedUser?._id ? updatedUser : user));
       } else {
         const newUser = await userService.createUser(userData);
         setUsers([...users, newUser]);
@@ -97,6 +102,11 @@ const UserList = () => {
       : { text: 'Inactive', color: 'bg-red-100 text-red-800' };
   };
 
+  // Safe function to get user initial
+  const getUserInitial = (user) => {
+    return user?.name?.charAt(0)?.toUpperCase() || '?';
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -107,9 +117,9 @@ const UserList = () => {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-6 overflow-y-auto h-[calc(100vh-6rem)] pr-2">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center ">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
             <p className="text-gray-600">Manage system users and permissions</p>
@@ -197,26 +207,30 @@ const UserList = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredUsers.map((user) => {
-                  const roleBadge = getRoleBadge(user.role);
-                  const statusBadge = getStatusBadge(user.isActive);
+                  const roleBadge = getRoleBadge(user?.role);
+                  const statusBadge = getStatusBadge(user?.isActive);
                   const RoleIcon = roleBadge.icon;
                   
                   return (
-                    <tr key={user._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <tr key={user?._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap min-w-[200px]">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10 bg-amber-100 rounded-full flex items-center justify-center">
                             <span className="text-amber-600 font-semibold">
-                              {user.name.charAt(0).toUpperCase()}
+                              {getUserInitial(user)}
                             </span>
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          <div className="ml-4 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate max-w-[150px]">
+                              {user?.name || 'Unnamed User'}
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{user.email}</div>
+                      <td className="px-6 py-4 whitespace-nowrap min-w-[200px]">
+                        <div className="text-sm text-gray-900 truncate max-w-[180px]">
+                          {user?.email || 'No email'}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${roleBadge.color}`}>
@@ -229,22 +243,22 @@ const UserList = () => {
                           {statusBadge.text}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 min-w-[120px]">
+                        <div className="text-sm text-gray-900 ">
+                          {user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap min-w-[120px]">
                         <div className="text-sm text-gray-900">
-                          {new Date(user.createdAt).toLocaleDateString()}
+                          {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 min-w-[150px]">
                         <Button
                           variant="outline"
                           size="small"
                           onClick={() => handleEdit(user)}
-                          disabled={user._id === currentUser._id}
+                          disabled={user?._id === currentUser?._id}
                         >
                           <Edit className="w-3 h-3 mr-1" />
                           Edit
@@ -252,8 +266,8 @@ const UserList = () => {
                         <Button
                           variant="danger"
                           size="small"
-                          onClick={() => handleDelete(user._id)}
-                          disabled={user._id === currentUser._id}
+                          onClick={() => handleDelete(user?._id)}
+                          disabled={user?._id === currentUser?._id}
                         >
                           <Trash2 className="w-3 h-3 mr-1" />
                           Delete

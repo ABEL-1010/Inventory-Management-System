@@ -113,7 +113,7 @@ const Dashboard = () => {
       icon: ShoppingCart 
     },
     { 
-      name: 'Low Stock Items', 
+      name: 'Low Stock', 
       value: stats.lowQuantity.toLocaleString(), 
       color: 'bg-red-500', 
       icon: AlertTriangle 

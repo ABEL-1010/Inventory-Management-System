@@ -126,7 +126,9 @@ export const deleteItem = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error('Cannot delete item with sales history');
     }
-
+    if (force && salesWithItem.length > 0) {
+      await Sale.deleteMany({ item: item._id });
+    }
     await Item.deleteOne({ _id: item._id });
     res.json({ message: 'Item removed' });
   } else {

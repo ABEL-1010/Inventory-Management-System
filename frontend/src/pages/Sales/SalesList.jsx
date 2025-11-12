@@ -229,9 +229,7 @@ const SalesList = () => {
                     <tr key={sale._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-amber-100 rounded-full flex items-center justify-center">
-                            <Package className="w-5 h-5 text-amber-600" />
-                          </div>
+                          
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
                               {sale.item?.name || 'N/A'}

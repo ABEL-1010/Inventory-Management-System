@@ -123,16 +123,25 @@ const ItemsList = () => {
     handleFilterChange({ ...filters, sortBy });
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      try {
-        await itemService.deleteItem(id);
-        fetchItems(); // Refresh the current page after deletion
-      } catch (error) {
-        alert('Error deleting item: ' + error.message);
-      }
+  const handleDelete = async (id, itemName, hasSales = false) => {
+  let message = 'Are you sure you want to delete this item?';
+  
+  if (hasSales) {
+    message = '⚠️ This item has sales records. Deleting it will remove all associated sales data. Are you sure you want to proceed?';
+  }
+  
+  if (window.confirm(message)) {
+    try {
+      await itemService.deleteItem(id);
+      toast.success('Item deleted successfully');
+      fetchItems();
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      const errorMessage = error.response?.data?.message || error.message;
+      toast.error('Error deleting item: ' + errorMessage);
     }
-  };
+  }
+};
 
   const handleEdit = (item) => {
     setEditingItem(item);
