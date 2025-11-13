@@ -253,25 +253,26 @@ const UserList = () => {
                           {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2 min-w-[150px]">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-3">
                         <Button
-                          variant="outline"
-                          size="small"
                           onClick={() => handleEdit(user)}
                           disabled={user?._id === currentUser?._id}
+                          className="flex items-center text-blue-600 hover:text-blue-900 transition-colors"
                         >
-                          <Edit className="w-3 h-3 mr-1" />
+                          <Edit className="w-4 h-4 mr-1" />
                           Edit
                         </Button>
                         <Button
-                          variant="danger"
-                          size="small"
+                          
                           onClick={() => handleDelete(user?._id)}
+                          className="flex items-center text-red-600 hover:text-red-900 transition-colors"
                           disabled={user?._id === currentUser?._id}
                         >
-                          <Trash2 className="w-3 h-3 mr-1" />
+                          <Trash2 className="w-4 h-4 mr-1" />
                           Delete
                         </Button>
+                        </div>
                       </td>
                     </tr>
                   );

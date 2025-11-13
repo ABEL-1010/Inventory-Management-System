@@ -1,6 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import Category from '../models/Category.js';
 import Item from '../models/Item.js';
+import Sale from '../models/Sale.js';
 
 // @desc    Get all categories with pagination
 // @route   GET /api/categories
@@ -94,21 +95,27 @@ export const updateCategory = asyncHandler(async (req, res) => {
 export const deleteCategory = asyncHandler(async (req, res) => {
   const category = await Category.findById(req.params.id);
 
-  if (category) {
-    // Check if category has items associated
-    const itemsWithCategory = await Item.find({ category: category._id });
-    
-    if (itemsWithCategory.length > 0) {
-      res.status(400);
-      throw new Error('Cannot delete category with associated items');
-    }
-
-    await Category.deleteOne({ _id: category._id });
-    res.json({ message: 'Category removed' });
-  } else {
+  if (!category) {
     res.status(404);
     throw new Error('Category not found');
   }
-});
 
-// REMOVE the duplicate getcategories function at the bottom
+  // Find all items under this category
+  const itemsWithCategory = await Item.find({ category: category._id });
+
+  if (itemsWithCategory.length > 0) {
+    // ⚠️ Warning: this will permanently delete all related items & sales
+    for (const item of itemsWithCategory) {
+      // Delete all sales linked to each item
+      await Sale.deleteMany({ item: item._id });
+    }
+
+    // Delete all items under this category
+    await Item.deleteMany({ category: category._id });
+  }
+
+  // Finally, delete the category
+  await Category.deleteOne({ _id: category._id });
+
+  res.json({ message: 'Category, items, and related sales deleted' });
+});

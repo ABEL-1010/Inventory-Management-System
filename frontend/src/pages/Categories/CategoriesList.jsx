@@ -241,25 +241,24 @@ const CategoriesList = () => {
                           {new Date(category.createdAt).toLocaleDateString()}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium ">
+                        <div className='flex space-x-3'>
                         <Button
-                          variant="outline"
-                          size="small"
+                          
                           onClick={() => handleEdit(category)}
-                          className="flex items-center gap-1"
+                          className="flex items-center text-blue-600 hover:text-blue-900 transition-colors"
                         >
-                          <Edit className="w-3 h-3" />
+                          <Edit className="w-4 h-4 mr-1" />
                           Edit
                         </Button>
                         <Button
-                          variant="danger"
-                          size="small"
                           onClick={() => handleDelete(category._id)}
-                          className="flex items-center gap-1"
+                          className="flex items-center text-red-600 hover:text-red-900 transition-colors"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-4 h-4 mr-1" />
                           Delete
                         </Button>
+                        </div>
                       </td>
                     </tr>
                   );

@@ -114,28 +114,25 @@ export const updateItem = asyncHandler(async (req, res) => {
 // @desc    Delete item
 // @route   DELETE /api/items/:id
 // @access  Private/Admin
+import Sale from '../models/Sale.js';
+
 export const deleteItem = asyncHandler(async (req, res) => {
   const item = await Item.findById(req.params.id);
 
   if (item) {
-    // Check if item has sales records
-    const Sale = require('../models/Sale');
     const salesWithItem = await Sale.find({ item: item._id });
-    
-    if (salesWithItem.length > 0) {
-      res.status(400);
-      throw new Error('Cannot delete item with sales history');
-    }
-    if (force && salesWithItem.length > 0) {
-      await Sale.deleteMany({ item: item._id });
+
+        if (salesWithItem.length > 0) {
+      await Sale.deleteMany({ item: item._id }); // dangerous if you need records
     }
     await Item.deleteOne({ _id: item._id });
-    res.json({ message: 'Item removed' });
-  } else {
+    res.json({ message: 'Item and related sales deleted' });
+      } else {
     res.status(404);
     throw new Error('Item not found');
   }
 });
+
 
 // @desc    Get items by category
 // @route   GET /api/items/category/:categoryId

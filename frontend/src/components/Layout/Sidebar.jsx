@@ -15,6 +15,7 @@ import {
 const Sidebar = () => {
   const { isAdmin, logout, user } = useAuth();
   const location = useLocation();
+  
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },

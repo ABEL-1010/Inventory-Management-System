@@ -1,10 +1,9 @@
-// frontend/src/pages/SalesList.jsx
 import React, { useState, useEffect } from 'react';
 import { saleService } from '../../services/saleService';
 import Layout from '../../components/Layout/Layout.jsx';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { PlusCircle, RefreshCw, Trash2, Calendar, Package, DollarSign } from 'lucide-react';
+import { PlusCircle, RefreshCw, Trash2, Calendar, Package, DollarSign, Edit, Hash } from 'lucide-react';
 import SalesForm from './SaleForm.jsx';
 import Pagination from '../../components/Common/Pagination.jsx';
 
@@ -13,6 +12,7 @@ const SalesList = () => {
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingSale, setEditingSale] = useState(null);
   const [filters, setFilters] = useState({
     search: '',
     sortBy: 'recent'
@@ -84,6 +84,11 @@ const SalesList = () => {
     }
   };
 
+  // Calculate serial number for each row
+  const getSerialNumber = (index) => {
+    return (pagination.currentPage - 1) * pagination.itemsPerPage + index + 1;
+  };
+
   // Handle page change
   const handlePageChange = (newPage) => {
     console.log('🎯 Changing to page:', newPage);
@@ -114,6 +119,22 @@ const SalesList = () => {
     } catch (error) {
       toast.error('Failed to delete sale');
     }
+  };
+
+  const handleEdit = (sale) => {
+    setEditingSale(sale);
+    setShowForm(true);
+  };
+
+  const handleFormClose = () => {
+    setShowForm(false);
+    setEditingSale(null);
+  };
+
+  const handleSaleAdded = () => {
+    fetchSales();
+    setShowForm(false);
+    setEditingSale(null);
   };
 
   const getSaleStatus = (quantity, totalAmount) => {
@@ -197,6 +218,12 @@ const SalesList = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="flex items-center">
+                      <Hash className="w-4 h-4 mr-1" />
+                      ID
+                    </div>
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Item
                   </th>
@@ -223,14 +250,26 @@ const SalesList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sales.map((sale) => {
+                {sales.map((sale, index) => {
                   const status = getSaleStatus(sale.quantity, sale.totalAmount);
+                  const serialNumber = getSerialNumber(index);
+                  
                   return (
                     <tr key={sale._id} className="hover:bg-gray-50">
+                      {/* ID Column */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full">
+                          <span className="text-sm font-medium text-gray-700">
+                            {serialNumber}
+                          </span>
+                        </div>
+                      </td>
+                      
+                      {/* Item Column */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           
-                          <div className="ml-4">
+                          <div>
                             <div className="text-sm font-medium text-gray-900">
                               {sale.item?.name || 'N/A'}
                             </div>
@@ -240,6 +279,7 @@ const SalesList = () => {
                           </div>
                         </div>
                       </td>
+                      
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{sale.quantity}</div>
                       </td>
@@ -250,7 +290,7 @@ const SalesList = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <DollarSign className="w-4 h-4 text-green-600 mr-1" />
+                          
                           <span className="text-sm font-semibold text-gray-900">
                             ${sale.totalAmount?.toFixed(2) || '0.00'}
                           </span>
@@ -263,7 +303,7 @@ const SalesList = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center text-sm text-gray-900">
-                          <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                          
                           {new Date(sale.saleDate || sale.createdAt).toLocaleDateString()}
                         </div>
                         <div className="text-xs text-gray-500">
@@ -272,13 +312,22 @@ const SalesList = () => {
                       </td>
                       {isAdmin && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => handleDelete(sale._id)}
-                            className="flex items-center text-red-600 hover:text-red-900 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4 mr-1" />
-                            Delete
-                          </button>
+                          <div className="flex space-x-3">
+                            <button
+                              onClick={() => handleEdit(sale)}
+                              className="flex items-center text-blue-600 hover:text-blue-900 transition-colors"
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(sale._id)}
+                              className="flex items-center text-red-600 hover:text-red-900 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -314,7 +363,7 @@ const SalesList = () => {
         )}
 
         {/* Sales Summary */}
-        {sales.length > 0 && (
+         {sales.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
             <div className="flex justify-between items-center">
               <div className="text-sm text-amber-800">
@@ -330,13 +379,11 @@ const SalesList = () => {
         )}
 
         {/* Sales Form Modal */}
-        {showForm && (
+        {(showForm || editingSale) && (
           <SalesForm
-            onClose={() => setShowForm(false)}
-            onSaleAdded={() => {
-              fetchSales();
-              setShowForm(false);
-            }}
+            sale={editingSale}
+            onClose={handleFormClose}
+            onSaleAdded={handleSaleAdded}
           />
         )}
       </div>

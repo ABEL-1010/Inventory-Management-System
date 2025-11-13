@@ -8,6 +8,7 @@ import ItemForm from './ItemForm.jsx';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import Pagination from '../../components/Common/Pagination.jsx';
+import { PlusCircle, RefreshCw, Trash2, Edit, Hash } from 'lucide-react';
 
 const ItemsList = () => {
   const { state, dispatch } = useApp();
@@ -123,22 +124,16 @@ const ItemsList = () => {
     handleFilterChange({ ...filters, sortBy });
   };
 
-  const handleDelete = async (id, itemName, hasSales = false) => {
-  let message = 'Are you sure you want to delete this item?';
-  
-  if (hasSales) {
-    message = '⚠️ This item has sales records. Deleting it will remove all associated sales data. Are you sure you want to proceed?';
-  }
-  
-  if (window.confirm(message)) {
+  const handleDelete = async (id) => {
+  if (window.confirm('Are you sure you want to delete this item?')) {
     try {
-      await itemService.deleteItem(id);
-      toast.success('Item deleted successfully');
-      fetchItems();
+      console.log('🗑️ Deleting item with id:', id);
+      const res = await itemService.deleteItem(id);
+      console.log('✅ Delete response:', res);
+      fetchItems(); // refresh list
     } catch (error) {
-      console.error('Error deleting item:', error);
-      const errorMessage = error.response?.data?.message || error.message;
-      toast.error('Error deleting item: ' + errorMessage);
+      console.error('Error deleting item:', error.response?.data || error.message);
+      alert('Error deleting item: ' + (error.response?.data?.message || error.message));
     }
   }
 };
@@ -347,22 +342,24 @@ const ItemsList = () => {
                           {status.text}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <Button
-                          variant="outline"
-                          size="small"
-                          onClick={() => handleEdit(item)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="small"
-                          onClick={() => handleDelete(item._id)}
-                        >
-                          Delete
-                        </Button>
-                      </td>
+                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-3">
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="flex items-center text-blue-600 hover:text-blue-900 transition-colors"
+                            >
+                              <Edit className="w-4 h-4 mr-1" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item._id)}
+                              className="flex items-center text-red-600 hover:text-red-900 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4 mr-1" />
+                              Delete
+                            </button>
+                          </div>
+                        </td>
                     </tr>
                   );
                 })}
