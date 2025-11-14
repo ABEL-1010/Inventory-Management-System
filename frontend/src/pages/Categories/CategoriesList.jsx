@@ -30,14 +30,14 @@ const CategoriesList = () => {
       // Handle both response formats
       let categories = [];
       if (Array.isArray(response)) {
-        categories = response; // Simple array format
+        categories = response; 
       } else if (response && Array.isArray(response.categories)) {
         categories = response.categories; // Paginated format
       } else if (response && response.items && Array.isArray(response.items)) {
-        categories = response.items; // Alternative paginated format
+        categories = response.items; 
       }
       
-      console.log(`📊 Loaded ${categories.length} categories`);
+      console.log(`Loaded ${categories.length} categories`);
       dispatch({ type: 'SET_CATEGORIES', payload: categories });
       
     } catch (error) {
@@ -59,7 +59,7 @@ const CategoriesList = () => {
       })
     : [];
 
-  // Sort categories based on selection
+  
   const sortedCategories = [...filteredCategories].sort((a, b) => {
     switch (filters.sortBy) {
       case 'asc':
@@ -96,7 +96,7 @@ const CategoriesList = () => {
   const handleFormClose = () => {
     setShowForm(false);
     setEditingCategory(null);
-    // Refresh categories after form submission
+    
     fetchCategories();
   };
 
@@ -130,7 +130,7 @@ const CategoriesList = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Header */}
+        
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Categories Management</h1>
@@ -145,9 +145,8 @@ const CategoriesList = () => {
           </Button>
         </div>
 
-        {/* Search & Filter Bar */}
         <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow border">
-          {/* Left: Search */}
+ 
           <div className="flex items-center">
             <Search className="w-5 h-5 text-gray-400 mr-2" />
             <input
@@ -159,7 +158,7 @@ const CategoriesList = () => {
             />
           </div>
 
-          {/* Right: Filters */}
+        
           <div className="flex space-x-2 text-sm">
             <select 
               value={filters.sortBy} 

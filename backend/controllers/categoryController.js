@@ -12,32 +12,87 @@ export const getCategories = asyncHandler(async (req, res) => {
   const search = req.query.search || '';
   const skip = (page - 1) * limit;
 
-  const filter = {};
-  if (search) {
-    filter.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { description: { $regex: search, $options: 'i' } }
+  try {
+    // Build aggregation pipeline
+    const pipeline = [
+      // Match stage for search
+      ...(search ? [{
+        $match: {
+          $or: [
+            { name: { $regex: search, $options: 'i' } },
+            { description: { $regex: search, $options: 'i' } }
+          ]
+        }
+      }] : []),
+      
+      // Lookup items and count them
+      {
+        $lookup: {
+          from: 'items', // Make sure this matches your items collection name
+          localField: '_id',
+          foreignField: 'category',
+          as: 'items'
+        }
+      },
+      
+      // Add itemsCount field
+      {
+        $addFields: {
+          itemsCount: { $size: '$items' }
+        }
+      },
+      
+      // Remove the items array to reduce response size
+      {
+        $project: {
+          items: 0
+        }
+      },
+      
+      // Sort by creation date
+      {
+        $sort: { createdAt: -1 }
+      }
     ];
-  }
 
-  const total = await Category.countDocuments(filter);
-  
-  const categories = await Category.find(filter)
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+    // Create count pipeline
+    const countPipeline = [...pipeline, { $count: 'total' }];
+    
+    // Execute count and data queries in parallel
+    const [countResult, categories] = await Promise.all([
+      Category.aggregate(countPipeline),
+      Category.aggregate([...pipeline, { $skip: skip }, { $limit: limit }])
+    ]);
 
-  res.json({
-    categories,
-    pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalItems: total,
-      itemsPerPage: limit,
-      hasNextPage: page < Math.ceil(total / limit),
-      hasPrevPage: page > 1
+    const total = countResult.length > 0 ? countResult[0].total : 0;
+
+    console.log('Categories with aggregation:', categories.length);
+    if (categories.length > 0) {
+      console.log('🔍 First category:', {
+        name: categories[0].name,
+        itemsCount: categories[0].itemsCount
+      });
     }
-  });
+
+    res.json({
+      categories,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNextPage: page < Math.ceil(total / limit),
+        hasPrevPage: page > 1
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in getCategories:', error);
+    res.status(500).json({
+      message: 'Error fetching categories',
+      error: error.message
+    });
+  }
 });
 
 // @desc    Get single category

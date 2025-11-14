@@ -27,33 +27,69 @@ export const getUser = asyncHandler(async (req, res) => {
 // @route   POST /api/users
 // @access  Private/Admin
 export const createUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role } = req.body;
+  try {
+    const { name, email, password, role } = req.body;
 
-  const userExists = await User.findOne({ email });
-  if (userExists) {
-    res.status(400);
-    throw new Error('User already exists');
-  }
+    console.log('Received data:', { name, email, password: '***', role });
 
-  const user = await User.create({
-    name,
-    email,
-    password,
-    role: role || 'user'
-  });
+    // Validate required fields
+    if (!name || !email || !password) {
+      console.log('Missing fields:', { name: !!name, email: !!email, password: !!password });
+      res.status(400);
+      throw new Error('Please fill in all required fields');
+    }
 
-  if (user) {
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      createdAt: user.createdAt
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      console.log('User already exists:', email);
+      res.status(400);
+      throw new Error('User already exists');
+    }
+
+    console.log('Creating user...');
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: role || 'user'
     });
-  } else {
-    res.status(400);
-    throw new Error('Invalid user data');
+
+    console.log('User created successfully:', user._id);
+    
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        createdAt: user.createdAt
+      });
+    } else {
+      res.status(400);
+      throw new Error('Invalid user data');
+    }
+  } catch (error) {
+    console.error('CREATE USER ERROR DETAILS:');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Full error:', error);
+    
+    // Handle specific error types
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      res.status(400);
+      throw new Error(`Validation failed: ${errors.join(', ')}`);
+    }
+    
+    if (error.code === 11000) {
+      res.status(400);
+      throw new Error('Email already exists');
+    }
+    
+    // Re-throw the original error
+    throw error;
   }
 });
 
@@ -109,3 +145,6 @@ export const deleteUser = asyncHandler(async (req, res) => {
     throw new Error('User not found');
   }
 });
+
+//pagination
+

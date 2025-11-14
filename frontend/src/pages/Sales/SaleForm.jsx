@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
 import { Plus, Minus, Trash2, ShoppingCart, X } from "lucide-react";
 
-const SalesForm = ({ onClose, onSaleAdded }) => {
+const SalesForm = ({ sale, onClose, onSaleAdded }) => {
   const { token } = useAuth();
 
   const [items, setItems] = useState([]);
@@ -16,6 +16,8 @@ const SalesForm = ({ onClose, onSaleAdded }) => {
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
+
+  const isEditMode = Boolean(sale);
 
   // Fetch available items
   useEffect(() => {
@@ -35,8 +37,25 @@ const SalesForm = ({ onClose, onSaleAdded }) => {
           itemsArray = data.data; // Alternative format
         }
         
-        console.log('📦 Loaded items:', itemsArray.length);
+        console.log(' Loaded items:', itemsArray.length);
         setItems(itemsArray);
+
+        if (isEditMode && sale) {
+          console.log('🔄 Edit mode - pre-populating with sale:', sale);
+          // Convert the single sale item to cart format
+          const cartItem = {
+            _id: sale.item?._id || sale.item,
+            name: sale.item?.name || 'Unknown Item',
+            price: sale.price || sale.item?.price || 0,
+            quantity: sale.quantity || 1
+          };
+          setCart([cartItem]);
+          
+          // Pre-select the item and quantity
+          setSelectedItem(cartItem._id);
+          setQuantity(cartItem.quantity);
+        }
+
       } catch (error) {
         console.error(error);
         toast.error("Failed to load items");
@@ -44,7 +63,7 @@ const SalesForm = ({ onClose, onSaleAdded }) => {
       }
     };
     fetchItems();
-  }, [token]);
+  }, [token, isEditMode, sale]);
 
   // Recalculate totals when cart changes
   useEffect(() => {
@@ -62,7 +81,7 @@ const SalesForm = ({ onClose, onSaleAdded }) => {
       return;
     }
 
-    // FIX: Ensure items is an array before calling find
+    
     if (!Array.isArray(items) || items.length === 0) {
       toast.error("No items available");
       return;
@@ -74,20 +93,25 @@ const SalesForm = ({ onClose, onSaleAdded }) => {
       return;
     }
 
-    const existing = cart.find((c) => c._id === item._id);
-    if (existing) {
-      setCart(
-        cart.map((c) =>
-          c._id === item._id ? { ...c, quantity: c.quantity + quantity } : c
-        )
-      );
+    if (isEditMode) {
+      setCart([{ ...item, quantity }]);
     } else {
-      setCart([...cart, { ...item, quantity }]);
+      // Original logic for create mode
+      const existing = cart.find((c) => c._id === item._id);
+      if (existing) {
+        setCart(
+          cart.map((c) =>
+            c._id === item._id ? { ...c, quantity: c.quantity + quantity } : c
+          )
+        );
+      } else {
+        setCart([...cart, { ...item, quantity }]);
+      }
     }
 
     setSelectedItem("");
     setQuantity(1);
-    toast.success("Item added to cart");
+    toast.success(isEditMode ? "Item updated" : "Item added to cart");
   };
 
   const removeFromCart = (id) => setCart(cart.filter((i) => i._id !== id));
@@ -104,24 +128,38 @@ const SalesForm = ({ onClose, onSaleAdded }) => {
     setLoading(true);
 
     try {
-      // Process sales sequentially to avoid race conditions
-      for (const item of cart) {
-        await axios.post(
-          `${import.meta.env.VITE_API_URL}/sales`,
-          { item: item._id, quantity: item.quantity },
+      if (isEditMode) {
+        // EDIT: Update existing sale
+        console.log('🔄 Updating sale:', sale._id);
+        await axios.put(
+          `${import.meta.env.VITE_API_URL}/sales/${sale._id}`,
+          { 
+            item: cart[0]._id, 
+            quantity: cart[0].quantity 
+          },
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        toast.success("Sale updated successfully");
+      } else {
+        // CREATE: Process new sales
+        for (const item of cart) {
+          await axios.post(
+            `${import.meta.env.VITE_API_URL}/sales`,
+            { item: item._id, quantity: item.quantity },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        }
+        toast.success(`Successfully recorded ${cart.length} sale(s)`);
       }
 
-      toast.success(`Successfully recorded ${cart.length} sale(s)`);
       setCart([]);
-      onSaleAdded?.(); // Safe call with optional chaining
-      onClose(); // hide form
+      onSaleAdded?.();
+      onClose();
     } catch (err) {
       console.error("Full error details:", err);
       console.error("Error response:", err.response?.data);
       
-      const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to record sales";
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || "Failed to process sale";
       toast.error(`Sales Error: ${errorMessage}`);
     } finally {
       setLoading(false);

@@ -5,6 +5,12 @@ import Item from '../models/Item.js';
 // @desc    Get all sales
 // @route   GET /api/sales
 // @access  Private
+// @desc    Get all sales
+// @route   GET /api/sales
+// @access  Private
+// @desc    Get all sales
+// @route   GET /api/sales
+// @access  Private
 export const getSales = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
@@ -16,37 +22,108 @@ export const getSales = asyncHandler(async (req, res) => {
 
   const skip = (page - 1) * limit;
 
-  // Build filter object
-  const filter = {};
+  // Build aggregation pipeline
+  const pipeline = [
+    // Lookup to join with items collection
+    {
+      $lookup: {
+        from: 'items',
+        localField: 'item',
+        foreignField: '_id',
+        as: 'itemData'
+      }
+    },
+    { $unwind: '$itemData' },
+    
+    // NEW: Lookup to join with categories collection
+    {
+      $lookup: {
+        from: 'categories', // Make sure this matches your categories collection name
+        localField: 'itemData.category', // This should be the category field in Item model
+        foreignField: '_id',
+        as: 'categoryData'
+      }
+    },
+    { $unwind: { path: '$categoryData', preserveNullAndEmptyArrays: true } },
+    
+    // Add search filter if search term exists
+    ...(search ? [{
+      $match: {
+        $or: [
+          { 'itemData.name': { $regex: escapeRegex(search.trim()), $options: 'i' } },
+          { 'categoryData.name': { $regex: escapeRegex(search.trim()), $options: 'i' } } // Updated to search category name
+        ]
+      }
+    }] : []),
+    
+    // Add date filter if dates provided
+    ...(startDate || endDate ? [{
+      $match: {
+        saleDate: {
+          ...(startDate && { $gte: new Date(startDate) }),
+          ...(endDate && { $lte: new Date(endDate) })
+        }
+      }
+    }] : [])
+  ];
+
+  // Create a separate count pipeline for total documents
+  const countPipeline = [...pipeline];
+  countPipeline.push({ $count: 'total' });
   
-  // Search filter
-  if (search) {
-    filter.$or = [
-      { 'item.name': { $regex: search, $options: 'i' } },
-    ];
+  let total = 0;
+  try {
+    const totalResult = await Sale.aggregate(countPipeline);
+    total = totalResult.length > 0 ? totalResult[0].total : 0;
+  } catch (error) {
+    console.error('Error counting documents:', error);
+    total = 0;
   }
 
-  // Date range filter
-  if (startDate || endDate) {
-    filter.saleDate = {};
-    if (startDate) {
-      filter.saleDate.$gte = new Date(startDate);
+  // Add projection, sorting and pagination to main pipeline
+  pipeline.push(
+    {
+      $project: {
+        quantity: 1,
+        totalAmount: 1,
+        saleDate: 1,
+        createdAt: 1,
+        item: {
+          _id: '$itemData._id',
+          name: '$itemData.name',
+          price: '$itemData.price',
+          category: { // Now properly populated category object
+            _id: '$categoryData._id',
+            name: '$categoryData.name'
+          }
+        }
+      }
+    },
+    { $sort: { [sortBy]: sortOrder } },
+    { $skip: skip },
+    { $limit: limit }
+  );
+
+  let sales = [];
+  try {
+    sales = await Sale.aggregate(pipeline);
+    console.log('✅ Processed sales with categories:', sales.length);
+    if (sales.length > 0) {
+      console.log('🔍 Sample sale item with category:', {
+        itemName: sales[0].item?.name,
+        category: sales[0].item?.category
+      });
     }
-    if (endDate) {
-      filter.saleDate.$lte = new Date(endDate);
-    }
+  } catch (error) {
+    console.error('Error fetching sales:', error);
+    sales = [];
   }
 
-  const total = await Sale.countDocuments(filter);
-
-  const sales = await Sale.find(filter)
-    .populate('item', 'name price category')
-    .sort({ [sortBy]: sortOrder })
-    .skip(skip)
-    .limit(limit);
-  
   console.log('➡️ Fetching sales:', { 
-    page, limit, skip, search, startDate, endDate, sortBy, sortOrder 
+    page, limit, skip, search, startDate, endDate, sortBy, sortOrder,
+    resultsCount: sales.length,
+    total,
+    searchTerm: search
   });
 
   res.json({
@@ -61,6 +138,11 @@ export const getSales = asyncHandler(async (req, res) => {
     }
   });
 });
+
+// Helper function to escape regex special characters
+function escapeRegex(text) {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+}
 
 // @desc    Get single sale
 // @route   GET /api/sales/:id
@@ -207,5 +289,5 @@ export const getSalesByDateRange = asyncHandler(async (req, res) => {
   res.json(sales);
 });
 
-//paginationnn
+
 

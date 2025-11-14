@@ -116,7 +116,7 @@ const ItemsList = () => {
   };
 
   const handleCategoryChange = (selectedCategory) => {
-    console.log('🏷️ Category changed to:', selectedCategory);
+    console.log(' Category changed to:', selectedCategory);
     handleFilterChange({ ...filters, selectedCategory });
   };
 
@@ -136,7 +136,7 @@ const ItemsList = () => {
       alert('Error deleting item: ' + (error.response?.data?.message || error.message));
     }
   }
-};
+  };
 
   const handleEdit = (item) => {
     setEditingItem(item);
@@ -168,22 +168,7 @@ const ItemsList = () => {
     return { text: 'In Stock', color: 'bg-green-100 text-green-800' };
   };
 
-  const handleCSVUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const res = await itemService.importCSV(formData);
-      fetchItems(); // Refresh items after import
-      alert(`${res.length} items imported successfully`);
-    } catch (error) {
-      console.error(error);
-      alert('Error importing CSV');
-    }
-  };
+  
 
   const exportToExcel = () => {
     // Export current page items
@@ -222,19 +207,8 @@ const ItemsList = () => {
               + Add New Item
             </Button>
 
-            <Button
-              onClick={() => document.getElementById('csvInput').click()}
-              className="bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
-            >
-              Import CSV
-            </Button>
-            <input
-              id="csvInput"
-              type="file"
-              accept=".csv"
-              onChange={handleCSVUpload}
-              className="hidden"
-            />
+            
+            
 
             <Button
               onClick={exportToExcel}

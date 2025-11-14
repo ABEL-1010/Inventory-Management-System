@@ -101,9 +101,16 @@ const SalesList = () => {
     setPagination(prev => ({ ...prev, currentPage: 1 }));
   };
 
-  const handleSearchChange = (search) => {
-    handleFilterChange({ ...filters, search });
-  };
+  const handleSearchChange = (searchValue) => {
+  console.log('🔍 Setting search to:', searchValue);
+  
+  // Update search filter and reset to page 1
+  setFilters(prev => ({ 
+    ...prev, 
+    search: searchValue
+  }));
+  setPagination(prev => ({ ...prev, currentPage: 1 }));
+};
 
   const handleSortChange = (sortBy) => {
     handleFilterChange({ ...filters, sortBy });
